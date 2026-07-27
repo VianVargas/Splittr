@@ -1,4 +1,14 @@
-import { Horizon, StrKey } from "@stellar/stellar-sdk";
+import {
+  Horizon,
+  StrKey,
+  TransactionBuilder,
+  Operation,
+  Asset,
+  Memo,
+  Networks,
+  BASE_FEE,
+} from "@stellar/stellar-sdk";
+import { signTransaction } from "@stellar/freighter-api";
 
 const HORIZON_URL = "https://horizon-testnet.stellar.org";
 
@@ -20,4 +30,55 @@ export async function fetchXlmBalance(
   } catch {
     return "0";
   }
+}
+
+export async function sendXlmPayment({
+  source,
+  destination,
+  amount,
+  memo,
+}: {
+  source: string;
+  destination: string;
+  amount: string;
+  memo?: string;
+}): Promise<{ hash: string }> {
+  const account = await server.loadAccount(source);
+
+  const tx = new TransactionBuilder(account, {
+    fee: BASE_FEE,
+    networkPassphrase: Networks.TESTNET,
+  })
+    .addOperation(
+      Operation.payment({
+        destination,
+        amount,
+        asset: Asset.native(),
+      })
+    )
+    .setTimeout(30);
+
+  if (memo) {
+    tx.addMemo(Memo.text(memo));
+  }
+
+  const built = tx.build();
+  const xdr = built.toXDR();
+
+  const { signedTxXdr, signerAddress, error } = await signTransaction(
+    xdr,
+    { networkPassphrase: Networks.TESTNET }
+  );
+
+  if (error || !signedTxXdr) {
+    throw new Error(error?.message ?? "Transaction rejected by user");
+  }
+
+  const signedTx = TransactionBuilder.fromXDR(
+    signedTxXdr,
+    Networks.TESTNET
+  );
+
+  const result = await server.submitTransaction(signedTx);
+  return { hash: result.hash };
 }

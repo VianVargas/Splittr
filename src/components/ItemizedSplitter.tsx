@@ -24,9 +24,11 @@ function generateId(): string {
 
 export default function ItemizedSplitter({
   items,
+  connectedPublicKey,
   onTotalsChange,
 }: {
   items: ReceiptItem[];
+  connectedPublicKey?: string;
   onTotalsChange?: (totals: ParticipantTotal[]) => void;
 }) {
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -265,7 +267,12 @@ export default function ItemizedSplitter({
                       <span className="font-medium text-white">
                         {t.name}
                       </span>
-                      {t.address && (
+                      {connectedPublicKey && t.address === connectedPublicKey && (
+                        <span className="ml-1.5 rounded bg-primary/20 px-1.5 py-0.5 text-[10px] text-primary">
+                          You
+                        </span>
+                      )}
+                      {t.address && t.address !== connectedPublicKey && (
                         <span className="ml-2 text-[11px] text-neutral">
                           {t.address.slice(0, 4)}...{t.address.slice(-4)}
                         </span>

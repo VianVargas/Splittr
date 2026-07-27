@@ -8,7 +8,7 @@ import {
   truncatePublicKey,
 } from "@/lib/freighter";
 
-export type WalletState =
+type WalletState =
   | { status: "checking" }
   | { status: "unavailable" }
   | { status: "disconnected" }
@@ -16,35 +16,48 @@ export type WalletState =
   | { status: "connected"; address: string };
 
 export default function WalletConnect({
-  wallet,
-  onAddressChange,
+  address,
+  onConnected,
+  onDisconnected,
 }: {
-  wallet: WalletState;
-  onAddressChange: (address: string) => void;
+  address: string;
+  onConnected: (address: string) => void;
+  onDisconnected: () => void;
 }) {
-  const [initialized, setInitialized] = useState(false);
+  const [wallet, setWallet] = useState<WalletState>({ status: "checking" });
 
   useEffect(() => {
-    if (initialized) return;
-    setInitialized(true);
-
     isFreighterAvailable().then((available) => {
-      if (!available) return;
-      getStoredPublicKey().then(({ address }) => {
-        if (address) onAddressChange(address);
+      if (!available) {
+        setWallet({ status: "unavailable" });
+        return;
+      }
+      getStoredPublicKey().then(({ address: addr }) => {
+        if (addr) {
+          setWallet({ status: "connected", address: addr });
+          onConnected(addr);
+        } else {
+          setWallet({ status: "disconnected" });
+        }
       });
     });
-  }, [initialized, onAddressChange]);
+  }, [onConnected]);
 
   const handleConnect = useCallback(async () => {
-    const { address, error } = await connectWallet();
-    if (error || !address) return;
-    onAddressChange(address);
-  }, [onAddressChange]);
+    setWallet({ status: "connecting" });
+    const { address: addr, error } = await connectWallet();
+    if (error || !addr) {
+      setWallet({ status: "disconnected" });
+      return;
+    }
+    setWallet({ status: "connected", address: addr });
+    onConnected(addr);
+  }, [onConnected]);
 
   const handleDisconnect = useCallback(() => {
-    onAddressChange("");
-  }, [onAddressChange]);
+    setWallet({ status: "disconnected" });
+    onDisconnected();
+  }, [onDisconnected]);
 
   if (wallet.status === "checking") {
     return (
