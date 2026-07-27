@@ -1,8 +1,12 @@
-import { Horizon } from "@stellar/stellar-sdk";
+import { Horizon, StrKey } from "@stellar/stellar-sdk";
 
 const HORIZON_URL = "https://horizon-testnet.stellar.org";
 
 const server = new Horizon.Server(HORIZON_URL);
+
+export function isValidStellarAddress(address: string): boolean {
+  return StrKey.isValidEd25519PublicKey(address);
+}
 
 export async function fetchXlmBalance(
   publicKey: string

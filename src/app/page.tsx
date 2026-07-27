@@ -1,11 +1,16 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import Image from "next/image";
 import WalletConnect, { type WalletState } from "@/components/WalletConnect";
 import BalanceDisplay from "@/components/BalanceDisplay";
 import ReceiptUploader from "@/components/ReceiptUploader";
 import ManualBillInput from "@/components/ManualBillInput";
+import ItemizedSplitter, {
+  type ParticipantTotal,
+} from "@/components/ItemizedSplitter";
 import type { ReceiptItem } from "@/lib/ocr";
+import logoSrc from "@/asset/img/Splittr Logo.png";
 
 type InputMode = "upload" | "manual" | null;
 
@@ -14,11 +19,13 @@ export default function Home() {
   const [balance, setBalance] = useState<string | null>(null);
   const [mode, setMode] = useState<InputMode>(null);
   const [items, setItems] = useState<ReceiptItem[] | null>(null);
+  const [totals, setTotals] = useState<ParticipantTotal[]>([]);
 
   const handleAddressChange = useCallback((address: string) => {
     setBalance(null);
     setMode(null);
     setItems(null);
+    setTotals([]);
     if (!address) {
       setWallet({ status: "disconnected" });
     } else {
@@ -32,6 +39,7 @@ export default function Home() {
 
   const handleItems = useCallback((parsed: ReceiptItem[]) => {
     setItems(parsed);
+    setTotals([]);
     setMode(null);
   }, []);
 
@@ -41,19 +49,29 @@ export default function Home() {
 
   const handleClear = useCallback(() => {
     setItems(null);
+    setTotals([]);
     setMode(null);
   }, []);
 
-  const subtotal = items
-    ? items.reduce((s, i) => s + i.price, 0)
-    : 0;
+  const handleTotalsChange = useCallback((t: ParticipantTotal[]) => {
+    setTotals(t);
+  }, []);
 
   return (
     <div className="flex flex-1 flex-col items-center bg-white px-4 dark:bg-zinc-950">
       <header className="flex w-full max-w-3xl items-center justify-between py-4">
-        <h1 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-          Splittr
-        </h1>
+        <div className="flex items-center gap-2">
+          <Image
+            src={logoSrc}
+            alt="Splittr logo"
+            width={48}
+            height={48}
+            className="rounded-full"
+          />
+          <h1 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+            Splittr
+          </h1>
+        </div>
         <div className="flex items-center gap-3">
           {wallet.status === "connected" && (
             <BalanceDisplay
@@ -150,8 +168,18 @@ export default function Home() {
               onClick={() => setMode(null)}
               className="mb-3 flex items-center gap-1 text-xs text-neutral transition-colors hover:text-primary"
             >
-              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              <svg
+                className="h-3 w-3"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M15 19l-7-7 7-7"
+                />
               </svg>
               Back
             </button>
@@ -165,8 +193,18 @@ export default function Home() {
               onClick={() => setMode(null)}
               className="mb-3 flex items-center gap-1 text-xs text-neutral transition-colors hover:text-primary"
             >
-              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              <svg
+                className="h-3 w-3"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M15 19l-7-7 7-7"
+                />
               </svg>
               Back
             </button>
@@ -175,39 +213,20 @@ export default function Home() {
         )}
 
         {items && items.length > 0 && (
-          <div className="w-full max-w-md">
-            <div className="rounded-xl border border-neutral/30 bg-tertiary p-5">
-              <div className="mb-3 flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-white">
-                  Items
-                </h3>
-                <button
-                  onClick={handleClear}
-                  className="text-xs text-neutral transition-colors hover:text-primary"
-                >
-                  Clear
-                </button>
-              </div>
-              <ul className="space-y-2">
-                {items.map((item) => (
-                  <li
-                    key={item.id}
-                    className="flex items-center justify-between text-sm"
-                  >
-                    <span className="text-white">{item.item}</span>
-                    <span className="font-medium text-secondary">
-                      {item.price.toFixed(2)} XLM
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              <div className="mt-3 flex items-center justify-between border-t border-neutral/20 pt-3 text-sm font-semibold">
-                <span className="text-white">Subtotal</span>
-                <span className="text-secondary">
-                  {subtotal.toFixed(2)} XLM
-                </span>
-              </div>
+          <div className="w-full max-w-lg">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-white">Split Bill</h2>
+              <button
+                onClick={handleClear}
+                className="text-xs text-neutral transition-colors hover:text-primary"
+              >
+                Clear & Start Over
+              </button>
             </div>
+            <ItemizedSplitter
+              items={items}
+              onTotalsChange={handleTotalsChange}
+            />
           </div>
         )}
       </main>
