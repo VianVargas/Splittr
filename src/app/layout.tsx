@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import favicon from "@/asset/img/Splittr Logo.png";
 
 export const metadata: Metadata = {
   title: "Splittr",
   description: "Split bills on Stellar Testnet",
+  icons: [{ rel: "icon", url: favicon.src }],
 };
 
 export default function RootLayout({

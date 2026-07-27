@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+@theme {
+  --color-primary: #00BFA5;
+  --color-secondary: #00FF85;
+  --color-tertiary: #121212;
+  --color-neutral: #94A3B8;
+}
+
 body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

@@ -8,45 +8,43 @@ import {
   truncatePublicKey,
 } from "@/lib/freighter";
 
-type WalletState =
+export type WalletState =
   | { status: "checking" }
   | { status: "unavailable" }
   | { status: "disconnected" }
   | { status: "connecting" }
   | { status: "connected"; address: string };
 
-export default function WalletConnect() {
-  const [wallet, setWallet] = useState<WalletState>({ status: "checking" });
+export default function WalletConnect({
+  wallet,
+  onAddressChange,
+}: {
+  wallet: WalletState;
+  onAddressChange: (address: string) => void;
+}) {
+  const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
+    if (initialized) return;
+    setInitialized(true);
+
     isFreighterAvailable().then((available) => {
-      if (!available) {
-        setWallet({ status: "unavailable" });
-        return;
-      }
+      if (!available) return;
       getStoredPublicKey().then(({ address }) => {
-        if (address) {
-          setWallet({ status: "connected", address });
-        } else {
-          setWallet({ status: "disconnected" });
-        }
+        if (address) onAddressChange(address);
       });
     });
-  }, []);
+  }, [initialized, onAddressChange]);
 
   const handleConnect = useCallback(async () => {
-    setWallet({ status: "connecting" });
     const { address, error } = await connectWallet();
-    if (error || !address) {
-      setWallet({ status: "disconnected" });
-      return;
-    }
-    setWallet({ status: "connected", address });
-  }, []);
+    if (error || !address) return;
+    onAddressChange(address);
+  }, [onAddressChange]);
 
   const handleDisconnect = useCallback(() => {
-    setWallet({ status: "disconnected" });
-  }, []);
+    onAddressChange("");
+  }, [onAddressChange]);
 
   if (wallet.status === "checking") {
     return (
@@ -90,7 +88,7 @@ export default function WalletConnect() {
     <button
       onClick={handleConnect}
       disabled={wallet.status === "connecting"}
-      className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+      className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-teal-600 disabled:cursor-not-allowed disabled:opacity-60"
     >
       {wallet.status === "connecting" ? (
         <>
