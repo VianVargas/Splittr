@@ -11,6 +11,7 @@ import ItemizedSplitter, {
   type ParticipantTotal,
 } from "@/components/ItemizedSplitter";
 import PaymentModal from "@/components/PaymentModal";
+import Toast from "@/components/Toast";
 import type { ReceiptItem } from "@/lib/ocr";
 import logoSrc from "@/asset/img/Splittr Logo.png";
 
@@ -84,6 +85,11 @@ export default function Home() {
     to: string;
     amount: string;
     memo: string;
+  } | null>(null);
+  const [toast, setToast] = useState<{
+    hash: string;
+    amount: string;
+    destination: string;
   } | null>(null);
   const [txHistory, setTxHistory] = useState<TxRecord[]>([]);
   const [sessionPayments, setSessionPayments] = useState<
@@ -173,6 +179,11 @@ export default function Home() {
             hash,
           },
         ]);
+        setToast({
+          hash,
+          amount: payTarget.total.toFixed(2),
+          destination: payTarget.address,
+        });
       }
       setPayTarget(null);
       setCopied(null);
@@ -183,6 +194,10 @@ export default function Home() {
 
   const handlePayModalClose = useCallback(() => {
     setPayTarget(null);
+  }, []);
+
+  const handleToastClose = useCallback(() => {
+    setToast(null);
   }, []);
 
   return (
@@ -757,6 +772,15 @@ export default function Home() {
             onSuccess={handlePaymentSuccess}
           />
         )}
+
+      {toast && (
+        <Toast
+          title="Payment Successful"
+          message={`${toast.amount} XLM → ${toast.destination.slice(0, 4)}...${toast.destination.slice(-4)}`}
+          href={`https://stellar.expert/explorer/testnet/tx/${toast.hash}`}
+          onClose={handleToastClose}
+        />
+      )}
     </div>
   );
 }
