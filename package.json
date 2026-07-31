@@ -32,5 +32,13 @@
     "minimatch": ">=9.0.5",
     "postcss": "^8.4.38",
     "sharp": "^0.35.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@google/genai",
+      "protobufjs",
+      "sharp",
+      "unrs-resolver"
+    ]
   }
 }
