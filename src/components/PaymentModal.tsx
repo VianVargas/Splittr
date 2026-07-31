@@ -2,18 +2,21 @@
 
 import { useCallback, useState } from "react";
 import { sendXlmPayment } from "@/lib/stellar";
+import { classifyTransactionError, type TransactionError } from "@/lib/errors";
+import type { WalletAdapter } from "@/lib/wallets";
 
 type PaymentState =
   | { status: "confirm" }
   | { status: "processing"; message: string }
   | { status: "success"; hash: string }
-  | { status: "error"; error: string };
+  | { status: "error"; error: TransactionError };
 
 export default function PaymentModal({
   source,
   destination,
   amount,
   memo,
+  signer,
   onClose,
   onSuccess,
 }: {
@@ -21,6 +24,7 @@ export default function PaymentModal({
   destination: string;
   amount: string;
   memo?: string;
+  signer: WalletAdapter;
   onClose: () => void;
   onSuccess: (hash: string) => void;
 }) {
@@ -29,23 +33,27 @@ export default function PaymentModal({
   });
 
   const handleConfirm = useCallback(async () => {
-    setState({ status: "processing", message: "Awaiting signature in Freighter..." });
+    setState({
+      status: "processing",
+      message: `Awaiting signature in ${signer.name}...`,
+    });
     try {
       const { hash } = await sendXlmPayment({
         source,
         destination,
         amount,
         memo,
+        signTransaction: signer.signTransaction,
       });
       setState({ status: "success", hash });
       onSuccess(hash);
     } catch (e) {
       setState({
         status: "error",
-        error: e instanceof Error ? e.message : "Unknown error",
+        error: classifyTransactionError(e),
       });
     }
-  }, [source, destination, amount, memo, onSuccess]);
+  }, [source, destination, amount, memo, signer, onSuccess]);
 
   const handleRetry = useCallback(() => {
     setState({ status: "confirm" });
@@ -147,7 +155,7 @@ export default function PaymentModal({
               <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              {state.error}
+              {state.error.message}
             </div>
             <div className="flex gap-2">
               <button

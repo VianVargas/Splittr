@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Image from "next/image";
 import WalletConnect from "@/components/WalletConnect";
 import BalanceDisplay from "@/components/BalanceDisplay";
@@ -11,8 +11,12 @@ import ItemizedSplitter, {
   type ParticipantTotal,
 } from "@/components/ItemizedSplitter";
 import PaymentModal from "@/components/PaymentModal";
+import ContractSplitForm from "@/components/ContractSplitForm";
+import EventFeed from "@/components/EventFeed";
 import Toast from "@/components/Toast";
 import type { ReceiptItem } from "@/lib/ocr";
+import type { WalletAdapter } from "@/lib/wallets";
+import type { SplitEvent } from "@/lib/contract";
 import logoSrc from "@/asset/img/Splittr Logo.png";
 
 type InputMode = "upload" | "manual" | "send" | null;
@@ -87,10 +91,11 @@ export default function Home() {
     memo: string;
   } | null>(null);
   const [toast, setToast] = useState<{
-    hash: string;
-    amount: string;
-    destination: string;
+    title: string;
+    message: string;
+    href?: string;
   } | null>(null);
+  const [signer, setSigner] = useState<WalletAdapter | null>(null);
   const [txHistory, setTxHistory] = useState<TxRecord[]>([]);
   const [sessionPayments, setSessionPayments] = useState<
     { destination: string; amount: string; hash: string }[]
@@ -128,6 +133,20 @@ export default function Home() {
     setPasteInput("");
     setPasteRequest(null);
     setSessionPayments([]);
+    setSigner(null);
+  }, []);
+
+  const handleAdapterChange = useCallback((adapter: WalletAdapter) => {
+    setSigner(adapter);
+  }, []);
+
+  const handleSplitEvent = useCallback((event: SplitEvent) => {
+    const isCreated = event.name === "SplitCreated";
+    setToast({
+      title: isCreated ? "Split Created" : "Split Settled",
+      message: `On-chain split #${event.splitId} ${isCreated ? "created" : "settled"}`,
+      href: `https://stellar.expert/explorer/testnet/tx/${event.txHash}`,
+    });
   }, []);
 
   const handleBalanceChange = useCallback((b: string) => {
@@ -180,9 +199,9 @@ export default function Home() {
           },
         ]);
         setToast({
-          hash,
-          amount: payTarget.total.toFixed(2),
-          destination: payTarget.address,
+          title: "Payment Successful",
+          message: `${payTarget.total.toFixed(2)} XLM → ${payTarget.address.slice(0, 4)}...${payTarget.address.slice(-4)}`,
+          href: `https://stellar.expert/explorer/testnet/tx/${hash}`,
         });
       }
       setPayTarget(null);
@@ -200,18 +219,26 @@ export default function Home() {
     setToast(null);
   }, []);
 
+  const contractEligible = useMemo(
+    () =>
+      totals.filter(
+        (t) => t.address && t.address.length > 0 && t.total > 0
+      ),
+    [totals]
+  );
+
   return (
     <div className="flex flex-1 flex-col items-center bg-white px-4 dark:bg-zinc-950">
-      <header className="flex w-full max-w-3xl items-center justify-between py-4">
-        <div className="flex items-center gap-2">
+      <header className="flex w-full max-w-3xl items-center justify-between gap-4 py-4">
+        <div className="flex shrink-0 items-center gap-2">
           <Image
             src={logoSrc}
             alt="Splittr logo"
             width={48}
             height={48}
-            className="rounded-full"
+            className="shrink-0 rounded-full"
           />
-          <h1 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+          <h1 className="whitespace-nowrap text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
             Splittr
           </h1>
         </div>
@@ -230,6 +257,7 @@ export default function Home() {
           <WalletConnect
             onConnected={handleConnected}
             onDisconnected={handleDisconnected}
+            onAdapterChange={handleAdapterChange}
           />
         </div>
       </header>
@@ -551,6 +579,16 @@ export default function Home() {
                 Complete Split
               </button>
             )}
+
+            {signer && contractEligible.length > 0 && (
+              <div className="mt-4">
+                <ContractSplitForm
+                  connectedAddress={addr}
+                  signer={signer}
+                  participants={contractEligible}
+                />
+              </div>
+            )}
           </div>
         )}
 
@@ -738,6 +776,12 @@ export default function Home() {
             </div>
           </details>
         )}
+
+        {!!addr && (
+          <div className="mt-4 w-full max-w-lg">
+            <EventFeed onEvent={handleSplitEvent} />
+          </div>
+        )}
       </main>
 
       <footer className="flex w-full max-w-3xl flex-col items-center gap-2 border-t border-neutral/20 py-6 text-xs text-neutral">
@@ -762,12 +806,13 @@ export default function Home() {
         <p>Splittr · Stellar Testnet</p>
       </footer>
 
-      {payTarget && addr && payTarget.address !== addr && (
+      {payTarget && addr && payTarget.address !== addr && signer && (
         <PaymentModal
             source={addr}
             destination={payTarget.address}
             amount={payTarget.total.toFixed(2)}
             memo={`Splittr: ${payTarget.name}`}
+            signer={signer}
             onClose={handlePayModalClose}
             onSuccess={handlePaymentSuccess}
           />
@@ -775,9 +820,9 @@ export default function Home() {
 
       {toast && (
         <Toast
-          title="Payment Successful"
-          message={`${toast.amount} XLM → ${toast.destination.slice(0, 4)}...${toast.destination.slice(-4)}`}
-          href={`https://stellar.expert/explorer/testnet/tx/${toast.hash}`}
+          title={toast.title}
+          message={toast.message}
+          href={toast.href}
           onClose={handleToastClose}
         />
       )}

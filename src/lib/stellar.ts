@@ -8,11 +8,15 @@ import {
   Networks,
   BASE_FEE,
 } from "@stellar/stellar-sdk";
-import { signTransaction } from "@stellar/freighter-api";
 
 const HORIZON_URL = "https://horizon-testnet.stellar.org";
 
 const server = new Horizon.Server(HORIZON_URL);
+
+export type Signer = (
+  xdr: string,
+  opts: { networkPassphrase: string }
+) => Promise<{ signedTxXdr?: string; error?: string }>;
 
 export function isValidStellarAddress(address: string): boolean {
   return StrKey.isValidEd25519PublicKey(address);
@@ -37,11 +41,13 @@ export async function sendXlmPayment({
   destination,
   amount,
   memo,
+  signTransaction,
 }: {
   source: string;
   destination: string;
   amount: string;
   memo?: string;
+  signTransaction: Signer;
 }): Promise<{ hash: string }> {
   const account = await server.loadAccount(source);
 
@@ -71,7 +77,7 @@ export async function sendXlmPayment({
   );
 
   if (error || !signedTxXdr) {
-    throw new Error(error?.message ?? "Transaction rejected by user");
+    throw new Error(error ?? "Transaction rejected by user");
   }
 
   const signedTx = TransactionBuilder.fromXDR(
