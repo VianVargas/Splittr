@@ -57,6 +57,24 @@ export default function ItemizedSplitter({
     setNewAddress("");
   }, [newName, newAddress]);
 
+  const selfAlreadyAdded = useMemo(
+    () =>
+      connectedPublicKey
+        ? participants.some((p) => p.address === connectedPublicKey)
+        : false,
+    [connectedPublicKey, participants]
+  );
+
+  const addMe = useCallback(() => {
+    if (!connectedPublicKey || selfAlreadyAdded) return;
+    const name = newName.trim() || "Me";
+    setParticipants((prev) => [
+      ...prev,
+      { id: generateId(), name, address: connectedPublicKey },
+    ]);
+    setNewName("");
+  }, [connectedPublicKey, selfAlreadyAdded, newName]);
+
   const removeParticipant = useCallback((id: string) => {
     setParticipants((prev) => prev.filter((p) => p.id !== id));
     setAssignments((prev) => {
@@ -201,6 +219,20 @@ export default function ItemizedSplitter({
           >
             Add
           </button>
+          {connectedPublicKey && (
+            <button
+              onClick={addMe}
+              disabled={selfAlreadyAdded}
+              title={
+                selfAlreadyAdded
+                  ? "Your account is already a participant"
+                  : "Add your connected account"
+              }
+              className="rounded-lg border border-neutral/30 px-4 py-2 text-sm text-neutral transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Add Me
+            </button>
+          )}
         </div>
       </div>
 

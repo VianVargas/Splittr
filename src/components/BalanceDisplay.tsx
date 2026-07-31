@@ -11,26 +11,47 @@ export default function BalanceDisplay({
   onBalanceChange?: (balance: string) => void;
 }) {
   const [balance, setBalance] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
-  const loadBalance = useCallback(async () => {
+  const applyBalance = useCallback(
+    (b: string) => {
+      setBalance(b);
+      setError(false);
+      onBalanceChange?.(b);
+    },
+    [onBalanceChange]
+  );
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const b = await fetchXlmBalance(publicKey);
+        if (!active) return;
+        applyBalance(b);
+      } catch {
+        if (active) setError(true);
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [publicKey, applyBalance]);
+
+  const handleRefresh = useCallback(async () => {
     setLoading(true);
     setError(false);
     try {
-      const b = await fetchXlmBalance(publicKey);
-      setBalance(b);
-      onBalanceChange?.(b);
+      applyBalance(await fetchXlmBalance(publicKey));
     } catch {
       setError(true);
     } finally {
       setLoading(false);
     }
-  }, [publicKey, onBalanceChange]);
-
-  useEffect(() => {
-    loadBalance();
-  }, [loadBalance]);
+  }, [publicKey, applyBalance]);
 
   return (
     <div className="flex items-center gap-2 rounded-lg bg-tertiary px-4 py-2 text-sm text-white">
@@ -66,7 +87,7 @@ export default function BalanceDisplay({
         </span>
       )}
       <button
-        onClick={loadBalance}
+        onClick={handleRefresh}
         disabled={loading}
         className="ml-1 rounded p-1 text-neutral transition-colors hover:text-white disabled:opacity-50"
         title="Refresh balance"

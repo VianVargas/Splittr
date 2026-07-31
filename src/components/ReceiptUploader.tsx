@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
+import Image from "next/image";
 import { parseReceiptImage } from "@/lib/ocr";
 import type { ReceiptItem } from "@/lib/ocr";
 
@@ -104,11 +105,13 @@ export default function ReceiptUploader({
         </div>
       ) : (
         <div className="space-y-3">
-          <div className="relative overflow-hidden rounded-lg">
-            <img
+          <div className="relative h-48 w-full overflow-hidden rounded-lg">
+            <Image
               src={preview}
               alt="Receipt preview"
-              className="max-h-48 w-full object-contain"
+              fill
+              sizes="(max-width: 768px) 100vw, 512px"
+              className="object-contain"
             />
           </div>
           <div className="flex items-center justify-between gap-2">

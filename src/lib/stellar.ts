@@ -65,7 +65,7 @@ export async function sendXlmPayment({
   const built = tx.build();
   const xdr = built.toXDR();
 
-  const { signedTxXdr, signerAddress, error } = await signTransaction(
+  const { signedTxXdr, error } = await signTransaction(
     xdr,
     { networkPassphrase: Networks.TESTNET }
   );

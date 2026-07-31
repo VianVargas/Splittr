@@ -5,6 +5,7 @@ import {
   isFreighterAvailable,
   connectWallet,
   getStoredPublicKey,
+  isTestnetNetwork,
   truncatePublicKey,
 } from "@/lib/freighter";
 
@@ -13,45 +14,44 @@ type WalletState =
   | { status: "unavailable" }
   | { status: "disconnected" }
   | { status: "connecting" }
-  | { status: "connected"; address: string };
+  | { status: "connected"; address: string; wrongNetwork: boolean };
 
 export default function WalletConnect({
-  address,
   onConnected,
   onDisconnected,
 }: {
-  address: string;
   onConnected: (address: string) => void;
   onDisconnected: () => void;
 }) {
   const [wallet, setWallet] = useState<WalletState>({ status: "checking" });
 
   useEffect(() => {
-    isFreighterAvailable().then((available) => {
+    isFreighterAvailable().then(async (available) => {
       if (!available) {
         setWallet({ status: "unavailable" });
         return;
       }
-      getStoredPublicKey().then(({ address: addr }) => {
-        if (addr) {
-          setWallet({ status: "connected", address: addr });
-          onConnected(addr);
-        } else {
-          setWallet({ status: "disconnected" });
-        }
-      });
+      const { address } = await getStoredPublicKey();
+      if (address) {
+        const wrongNetwork = !(await isTestnetNetwork());
+        setWallet({ status: "connected", address, wrongNetwork });
+        onConnected(address);
+      } else {
+        setWallet({ status: "disconnected" });
+      }
     });
   }, [onConnected]);
 
   const handleConnect = useCallback(async () => {
     setWallet({ status: "connecting" });
-    const { address: addr, error } = await connectWallet();
-    if (error || !addr) {
+    const { address, error } = await connectWallet();
+    if (error || !address) {
       setWallet({ status: "disconnected" });
       return;
     }
-    setWallet({ status: "connected", address: addr });
-    onConnected(addr);
+    const wrongNetwork = !(await isTestnetNetwork());
+    setWallet({ status: "connected", address, wrongNetwork });
+    onConnected(address);
   }, [onConnected]);
 
   const handleDisconnect = useCallback(() => {
@@ -87,6 +87,11 @@ export default function WalletConnect({
         <span className="rounded-full bg-emerald-100 px-3 py-1 text-sm font-mono text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300">
           {truncatePublicKey(wallet.address)}
         </span>
+        {wallet.wrongNetwork && (
+          <span className="rounded-full bg-red-500/10 px-2.5 py-1 text-[11px] font-medium text-red-400">
+            Wrong Network
+          </span>
+        )}
         <button
           onClick={handleDisconnect}
           className="rounded-lg border border-zinc-300 px-3 py-1 text-sm text-zinc-600 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"

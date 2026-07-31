@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import Image from "next/image";
 import WalletConnect from "@/components/WalletConnect";
 import BalanceDisplay from "@/components/BalanceDisplay";
 import ReceiptUploader from "@/components/ReceiptUploader";
 import ManualBillInput from "@/components/ManualBillInput";
+import DirectSendForm from "@/components/DirectSendForm";
 import ItemizedSplitter, {
   type ParticipantTotal,
 } from "@/components/ItemizedSplitter";
@@ -13,7 +14,7 @@ import PaymentModal from "@/components/PaymentModal";
 import type { ReceiptItem } from "@/lib/ocr";
 import logoSrc from "@/asset/img/Splittr Logo.png";
 
-type InputMode = "upload" | "manual" | null;
+type InputMode = "upload" | "manual" | "send" | null;
 
 interface TxRecord {
   hash: string;
@@ -91,22 +92,19 @@ export default function Home() {
   const [completedSplits, setCompletedSplits] = useState<
     CompletedSplit[]
   >([]);
-  const balanceKey = useRef(0);
+  const [balanceNonce, setBalanceNonce] = useState(0);
 
-  useEffect(() => {
-    const all = loadTxs();
-    setTxHistory(addr ? all.filter((t) => t.source === addr) : []);
-  }, [addr]);
-
-  useEffect(() => {
-    const all = loadSplits();
+  const [prevAddr, setPrevAddr] = useState(addr);
+  if (prevAddr !== addr) {
+    setPrevAddr(addr);
+    setTxHistory(addr ? loadTxs().filter((t) => t.source === addr) : []);
     setCompletedSplits(
-      addr ? all.filter((s) => s.source === addr) : []
+      addr ? loadSplits().filter((s) => s.source === addr) : []
     );
-  }, [addr]);
+  }
 
   const refreshBalance = useCallback(() => {
-    balanceKey.current += 1;
+    setBalanceNonce((n) => n + 1);
   }, []);
 
   const handleConnected = useCallback((address: string) => {
@@ -203,15 +201,18 @@ export default function Home() {
           </h1>
         </div>
         <div className="flex items-center gap-3">
+          <span className="flex items-center gap-1.5 rounded-full border border-secondary/40 bg-secondary/10 px-3 py-1 text-xs font-semibold text-secondary">
+            <span className="h-1.5 w-1.5 rounded-full bg-secondary" />
+            Testnet
+          </span>
           {addr && (
             <BalanceDisplay
-              key={balanceKey.current}
+              key={balanceNonce}
               publicKey={addr}
               onBalanceChange={handleBalanceChange}
             />
           )}
           <WalletConnect
-            address={addr}
             onConnected={handleConnected}
             onDisconnected={handleDisconnected}
           />
@@ -241,7 +242,7 @@ export default function Home() {
         )}
 
         {!!addr && !mode && !items && (
-          <div className="mt-8 grid w-full grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="mt-8 grid w-full grid-cols-1 gap-4 sm:grid-cols-3">
             <button
               onClick={() => setMode("upload")}
               className="flex flex-col items-center gap-3 rounded-xl border border-neutral/30 bg-tertiary px-6 py-10 text-center transition-colors hover:border-primary"
@@ -289,6 +290,31 @@ export default function Home() {
               </span>
               <span className="text-xs text-neutral">
                 Type bill total or line items
+              </span>
+            </button>
+
+            <button
+              onClick={() => setMode("send")}
+              className="flex flex-col items-center gap-3 rounded-xl border border-neutral/30 bg-tertiary px-6 py-10 text-center transition-colors hover:border-primary"
+            >
+              <svg
+                className="h-8 w-8 text-primary"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={1.5}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z"
+                />
+              </svg>
+              <span className="text-sm font-semibold text-white">
+                Send XLM
+              </span>
+              <span className="text-xs text-neutral">
+                Direct transfer to any address
               </span>
             </button>
           </div>
@@ -341,6 +367,42 @@ export default function Home() {
               Back
             </button>
             <ManualBillInput onItems={handleItems} />
+          </div>
+        )}
+
+        {!!addr && mode === "send" && (
+          <div className="w-full max-w-md">
+            <button
+              onClick={() => setMode(null)}
+              className="mb-3 flex items-center gap-1 text-xs text-neutral transition-colors hover:text-primary"
+            >
+              <svg
+                className="h-3 w-3"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+              Back
+            </button>
+            <DirectSendForm
+              connectedPublicKey={addr}
+              onSend={(destination, amount) =>
+                setPayTarget({
+                  id: "direct",
+                  name: "Direct Payment",
+                  address: destination,
+                  items: [],
+                  total: parseFloat(amount),
+                })
+              }
+            />
           </div>
         )}
 
@@ -662,6 +724,28 @@ export default function Home() {
           </details>
         )}
       </main>
+
+      <footer className="flex w-full max-w-3xl flex-col items-center gap-2 border-t border-neutral/20 py-6 text-xs text-neutral">
+        <div className="flex items-center gap-4">
+          <a
+            href="https://github.com/VianVargas/Splittr"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="transition-colors hover:text-primary"
+          >
+            GitHub
+          </a>
+          <a
+            href="https://stellar.expert/explorer/testnet"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="transition-colors hover:text-primary"
+          >
+            Stellar Expert Testnet
+          </a>
+        </div>
+        <p>Splittr · Stellar Testnet</p>
+      </footer>
 
       {payTarget && addr && payTarget.address !== addr && (
         <PaymentModal

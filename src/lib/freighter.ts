@@ -2,7 +2,10 @@ import {
   isConnected,
   requestAccess,
   getAddress,
+  getNetworkDetails,
 } from "@stellar/freighter-api";
+
+const TESTNET_PASSPHRASE = "Test SDF Network ; September 2015";
 
 export async function isFreighterAvailable(): Promise<boolean> {
   try {
@@ -40,6 +43,20 @@ export async function getStoredPublicKey(): Promise<{
     return { address };
   } catch (e) {
     return { address: "", error: (e as Error).message };
+  }
+}
+
+export async function isTestnetNetwork(): Promise<boolean> {
+  try {
+    const details = await getNetworkDetails();
+    if (details.error || !details.networkUrl) return false;
+    return (
+      details.network?.toLowerCase() === "testnet" ||
+      details.networkPassphrase === TESTNET_PASSPHRASE ||
+      details.networkUrl.includes("horizon-testnet")
+    );
+  } catch {
+    return false;
   }
 }
 
