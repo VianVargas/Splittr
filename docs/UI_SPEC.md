@@ -106,7 +106,7 @@ _Satisfies Level 2: Transaction status visible_
 
 _Satisfies Level 2: Real-time event integration_
 
-- Subscribes to `Split` contract events via `rpc.streamEvents` (SSE) filtered by the deployed contract.
+- Polls `Split` contract events via `rpc.getEvents` filtered by the deployed contract, using cursor-based pagination and short poll intervals.
 - **Toast notifications** on new events (e.g., `Split created`, `Share settled`).
 - Collapsible activity list showing recent events (contract, topic, timestamp).
 
@@ -133,7 +133,7 @@ _Satisfies Level 2: Real-time event integration_
 | **3. Contract Called**       | `lib/contract.ts` wraps `SorobanRpc`; `ContractSplitForm.tsx` invokes `create_split` / `settle` |
 | **4. Transaction Status**    | `TransactionStatusPanel.tsx` shows pending → success / failed lifecycle via `rpc.getTransaction` polling |
 | **5. 2+ Meaningful Commits** | Satisfied via repository git history |
-| **6. Multi-wallet + Events** | `WalletConnect.tsx` supports Freighter and Rabet; `EventFeed.tsx` streams contract events via `rpc.streamEvents` |
+| **6. Multi-wallet + Events** | `WalletConnect.tsx` supports Freighter and Rabet; `EventFeed.tsx` polls contract events via `rpc.getEvents` |
 
 ---
 

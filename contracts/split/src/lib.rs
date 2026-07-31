@@ -1,5 +1,5 @@
 #![no_std]
-use soroban_sdk::{contract, contractimpl, symbol_short, Address, Env, Symbol, Vec};
+use soroban_sdk::{contract, contractimpl, contracttype, symbol_short, Address, Env, Symbol, Vec};
 
 const COUNTER: Symbol = symbol_short!("counter");
 
@@ -67,7 +67,7 @@ impl SplitContract {
         env.storage().instance().set(&COUNTER, &id);
 
         env.events()
-            .publish((symbol_short!("SplitCreated"), id), ());
+            .publish((Symbol::new(&env, "SplitCreated"), id), ());
         id
     }
 
@@ -102,6 +102,6 @@ impl SplitContract {
             .set(&DataKey::Split(id), &split);
 
         env.events()
-            .publish((symbol_short!("SplitSettled"), id), ());
+            .publish((Symbol::new(&env, "SplitSettled"), id), ());
     }
 }

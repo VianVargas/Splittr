@@ -208,7 +208,8 @@ export interface SplitEvent {
 }
 
 export async function fetchSplitEvents(
-  cursor?: string
+  cursor?: string,
+  startLedger?: number
 ): Promise<{ events: SplitEvent[]; cursor: string }> {
   if (!SPLIT_CONTRACT_ID) return { events: [], cursor: cursor ?? "" };
   const server = getRpc();
@@ -221,7 +222,8 @@ export async function fetchSplitEvents(
       }
     : {
         filters: [{ contractIds: [SPLIT_CONTRACT_ID] }],
-        startLedger: (await server.getLatestLedger()).sequence,
+        startLedger:
+          startLedger ?? (await server.getLatestLedger()).sequence,
         limit: 50,
       };
 
