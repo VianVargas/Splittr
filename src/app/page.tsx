@@ -229,7 +229,7 @@ export default function Home() {
 
   return (
     <div className="flex flex-1 flex-col items-center bg-white px-4 dark:bg-zinc-950">
-      <header className="flex w-full max-w-3xl items-center justify-between gap-4 py-4">
+      <header className="flex w-full max-w-3xl items-center justify-between gap-4 border-b border-neutral/20 py-4">
         <div className="flex shrink-0 items-center gap-2">
           <Image
             src={logoSrc}
