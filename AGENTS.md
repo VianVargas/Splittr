@@ -20,3 +20,41 @@ Run scripts directly via `pnpm dev`, `pnpm build`, or `pnpm lint`. Verify script
 ## Trust
 
 If this file conflicts with the actual repo config, scripts, or lockfiles, trust the executable source and update this file.
+
+## Contract Deployment
+
+The Soroban `Split` contract lives in `contracts/split/`. The frontend expects the deployed contract ID in `NEXT_PUBLIC_SPLIT_CONTRACT_ID` and the deployment ledger in `NEXT_PUBLIC_CONTRACT_START_LEDGER` inside `.env.local`. The deployment ledger is used by the `EventFeed` component to backfill historical contract events on first load.
+
+### Prerequisites
+
+- Rust toolchain with `cargo`
+- `wasm32v1-none` target:
+  `rustup target add wasm32v1-none`
+- A funded Stellar Testnet account (the deployer), or let the script fund a new one via Friendbot
+
+### Deploy
+
+1. Set the deployer secret key in `.env.local` or as an environment variable:
+
+   ```bash
+   export DEPLOYER_SECRET_KEY="S..."
+   ```
+
+2. Build and deploy the contract:
+
+   ```bash
+   pnpm build:contract
+   pnpm deploy:contract
+   ```
+
+   The script will compile the contract, upload the WASM, deploy an instance to Testnet, and write the resulting contract ID and deployment ledger to `.env.local`. If the deployer account is unfunded, it is automatically funded via Friendbot.
+
+3. To overwrite an existing contract ID, pass `--force`:
+
+   ```bash
+   pnpm deploy:contract -- --force
+   ```
+
+4. Restart the Next.js dev server so the new `NEXT_PUBLIC_SPLIT_CONTRACT_ID` and `NEXT_PUBLIC_CONTRACT_START_LEDGER` are loaded.
+
+Note: the deployer is a separate admin account. End users connect their own wallets (Freighter/Rabet) to call the deployed contract.
