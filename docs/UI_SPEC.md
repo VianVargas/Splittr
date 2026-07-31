@@ -75,11 +75,73 @@ _Satisfies Level 1: Transaction Flow Feedback & Standards_
   - Red error alert box with explicit failure reason (e.g., `Transaction Cancelled`, `Insufficient XLM`).
   - `Retry` button.
 
+### Component 6: Wallet Selector (`WalletConnect.tsx`)
+
+_Satisfies Level 2: Multi-wallet support_
+
+- **Disconnected State:** Dropdown to choose between `Connect Freighter Wallet` and `Connect Rabet Wallet`.
+- **Connecting State:** Disabled button showing spinner and selected wallet name.
+- **Connected State:** Displays truncated public key (`GABC...1234`), the connected wallet name, a `Disconnect` button, and the Level 1 Testnet network check applied per wallet.
+- **Unavailable State:** Shows an install link when the selected wallet extension is not detected.
+- **Wallet Adapters (`lib/wallets/`):** Freighter (`freighter.ts`) and Rabet (`rabet.ts`) implement a shared interface: `isAvailable()`, `connect()`, `getAddress()`, `signTransaction(xdr)`, `getNetworkDetails()`.
+
+### Component 7: On-Chain Bill Split (`ContractSplitForm.tsx`)
+
+_Satisfies Level 2: Contract called from frontend_
+
+- Consumes the existing `ItemizedSplitter` output (participants + calculated shares).
+- Maps each participant's Stellar address and XLM share into the Soroban contract invocation via `lib/contract.ts`.
+- `Create Split on Testnet` button triggers the contract call; status is surfaced by `TransactionStatusPanel`.
+- Displays the deployed `Split` contract ID with a link to `https://stellar.expert/explorer/testnet/contract/[CONTRACT_ID]`.
+
+### Component 8: Transaction Status Panel (`TransactionStatusPanel.tsx`)
+
+_Satisfies Level 2: Transaction status visible_
+
+- **Pending State:** Spinner + "Awaiting confirmation on Stellar Testnet..." with live polling of `rpc.getTransaction(hash)`.
+- **Success State:** Green confirmation banner, displayed Transaction Hash, Stellar Expert link.
+- **Failed State:** Red error alert with the specific error type (see Level 2 Error Taxonomy) and a `Retry` button.
+
+### Component 9: Live Event Feed (`EventFeed.tsx`)
+
+_Satisfies Level 2: Real-time event integration_
+
+- Subscribes to `Split` contract events via `rpc.streamEvents` (SSE) filtered by the deployed contract.
+- **Toast notifications** on new events (e.g., `Split created`, `Share settled`).
+- Collapsible activity list showing recent events (contract, topic, timestamp).
+
 ---
 
 ## 3. Step-by-Step User Flow
 
-1. **Connect:** User lands on page, connects Freighter (Stellar Testnet), and views their XLM balance.
+1. **Connect:** User lands on page, connects Freighter or Rabet (Stellar Testnet), and views their XLM balance.
 2. **Upload or Input:** User drops a receipt image to extract items, inputs split parameters, or manually enters recipient address and XLM amount.
 3. **Calculate:** System calculates final XLM transfer amount.
-4. **Sign & Pay (Level 1 Core):** User clicks `Send XLM via Stellar`, approves the transaction prompt in Freighter, and receives visual feedback with a transaction confirmation link to Stellar Expert.
+4. **Sign & Pay (Level 1 Core):** User clicks `Send XLM via Stellar`, approves the transaction prompt in the wallet, and receives visual feedback with a transaction confirmation link to Stellar Expert.
+5. **Create On-Chain Split (Level 2 Core):** User clicks `Create Split on Testnet` and approves the Soroban contract invocation in Freighter or Rabet.
+6. **Track:** The `TransactionStatusPanel` shows the contract call lifecycle (pending → success / failed).
+7. **Real-Time Events:** Connected participants receive live notifications via `EventFeed` when a split is created or a share is settled.
+
+---
+
+## 4. Level 2 Requirements Compliance Map
+
+| Level 2 Requirement          | UI Component / Feature Specification                                                         |
+| :--------------------------- | :------------------------------------------------------------------------------------------ |
+| **1. Three Error Types**     | `PaymentModal.tsx` + `TransactionStatusPanel.tsx` handle ≥3 explicit error categories (`Transaction Cancelled`, `Insufficient XLM`, `Contract Call Failed`, `Network Error`) with red alert + Retry |
+| **2. Contract Deployed**     | Soroban `Split` contract on Stellar Testnet; contract ID displayed in `ContractSplitForm.tsx` with Stellar Expert link |
+| **3. Contract Called**       | `lib/contract.ts` wraps `SorobanRpc`; `ContractSplitForm.tsx` invokes `create_split` / `settle` |
+| **4. Transaction Status**    | `TransactionStatusPanel.tsx` shows pending → success / failed lifecycle via `rpc.getTransaction` polling |
+| **5. 2+ Meaningful Commits** | Satisfied via repository git history |
+| **6. Multi-wallet + Events** | `WalletConnect.tsx` supports Freighter and Rabet; `EventFeed.tsx` streams contract events via `rpc.streamEvents` |
+
+---
+
+## 5. Level 2 Error Taxonomy
+
+| Error Type            | User-Facing Message                                       | UI Treatment                                          |
+| :-------------------- | :-------------------------------------------------------- | :---------------------------------------------------- |
+| **User Rejected**     | `Transaction Cancelled`                                   | Red alert box, `Close` / `Retry`                      |
+| **Insufficient XLM**  | `Insufficient XLM`                                        | Red alert box with balance hint, `Retry`              |
+| **Contract Call Fail**| `Contract call failed: [host error code]`                 | Red alert box, `Retry`                                |
+| **Network Error**     | `Network Error: unable to reach Stellar Testnet`          | Red alert box, `Retry`                                |
