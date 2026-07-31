@@ -79,6 +79,8 @@ export default function Home() {
   const [balance, setBalance] = useState<string | null>(null);
   const [mode, setMode] = useState<InputMode>(null);
   const [items, setItems] = useState<ReceiptItem[] | null>(null);
+  const [itemOrigin, setItemOrigin] = useState<InputMode>(null);
+  const [backItems, setBackItems] = useState<ReceiptItem[] | null>(null);
   const [totals, setTotals] = useState<ParticipantTotal[]>([]);
   const [payTarget, setPayTarget] = useState<ParticipantTotal | null>(
     null
@@ -156,8 +158,10 @@ export default function Home() {
   const handleItems = useCallback((parsed: ReceiptItem[]) => {
     setItems(parsed);
     setTotals([]);
+    setItemOrigin(mode);
+    setBackItems(null);
     setMode(null);
-  }, []);
+  }, [mode]);
 
   const handleSkip = useCallback(() => {
     setMode("manual");
@@ -167,10 +171,22 @@ export default function Home() {
     setItems(null);
     setTotals([]);
     setMode(null);
+    setItemOrigin(null);
+    setBackItems(null);
     setPayTarget(null);
     setCopied(null);
     setSessionPayments([]);
   }, []);
+
+  const handleBackToEdit = useCallback(() => {
+    setBackItems(items);
+    setItems(null);
+    setTotals([]);
+    setPayTarget(null);
+    setCopied(null);
+    setMode(itemOrigin);
+    setItemOrigin(null);
+  }, [itemOrigin, items]);
 
   const handleTotalsChange = useCallback((t: ParticipantTotal[]) => {
     setTotals(t);
@@ -409,7 +425,7 @@ export default function Home() {
               </svg>
               Back
             </button>
-            <ManualBillInput onItems={handleItems} />
+            <ManualBillInput onItems={handleItems} initialItems={backItems ?? undefined} />
           </div>
         )}
 
@@ -455,12 +471,35 @@ export default function Home() {
               <h2 className="text-sm font-semibold text-white">
                 Split Bill
               </h2>
-              <button
-                onClick={handleClear}
-                className="text-xs text-neutral transition-colors hover:text-primary"
-              >
-                Clear & Start Over
-              </button>
+              <div className="flex items-center gap-3">
+                {itemOrigin && (
+                  <button
+                    onClick={handleBackToEdit}
+                    className="flex items-center gap-1 text-xs text-neutral transition-colors hover:text-primary"
+                  >
+                    <svg
+                      className="h-3 w-3"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M15 19l-7-7 7-7"
+                      />
+                    </svg>
+                    Back
+                  </button>
+                )}
+                <button
+                  onClick={handleClear}
+                  className="text-xs text-neutral transition-colors hover:text-primary"
+                >
+                  Clear & Start Over
+                </button>
+              </div>
             </div>
             <ItemizedSplitter
               items={items}

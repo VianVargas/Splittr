@@ -5,11 +5,18 @@ import type { ReceiptItem } from "@/lib/ocr";
 
 export default function ManualBillInput({
   onItems,
+  initialItems,
 }: {
   onItems: (items: ReceiptItem[]) => void;
+  initialItems?: ReceiptItem[];
 }) {
   const [total, setTotal] = useState("");
-  const [rows, setRows] = useState([{ item: "", price: "" }]);
+  const [rows, setRows] = useState(() => {
+    if (initialItems && initialItems.length > 0) {
+      return initialItems.map((i) => ({ item: i.item, price: i.price.toString() }));
+    }
+    return [{ item: "", price: "" }];
+  });
 
   const addRow = useCallback(() => {
     setRows((prev) => [...prev, { item: "", price: "" }]);
